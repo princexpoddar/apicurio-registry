@@ -14,6 +14,8 @@ import java.util.HashMap;
 import java.util.List;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Mixin;
+import io.apicurio.registry.cli.common.CliException;
+import io.apicurio.registry.rest.client.models.ProblemDetails;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
@@ -93,6 +95,10 @@ public class ArtifactCreateCommand extends AbstractCommand {
 
     @Override
     public void run(final OutputBuffer output) throws Exception {
+        if (isBlank(artifactType) && isBlank(file)) {
+            throw new CliException("Either an artifact type (--type) or artifact content (--file) must be provided.");
+        }
+
         final var resolvedGroupId = IdUtil.resolveGroupId(groupId, config);
 
         final var newArtifact = new CreateArtifact();
@@ -125,8 +131,17 @@ public class ArtifactCreateCommand extends AbstractCommand {
             newArtifact.setFirstVersion(firstVersion);
         }
 
-        final var result = client.getRegistryClient()
-                .groups().byGroupId(resolvedGroupId).artifacts().post(newArtifact);
+        io.apicurio.registry.rest.client.models.CreateArtifactResponse result;
+        try {
+            result = client.getRegistryClient()
+                    .groups().byGroupId(resolvedGroupId).artifacts().post(newArtifact);
+        } catch (ProblemDetails e) {
+            if ("InvalidArtifactTypeException".equals(e.getName()) || "MissingRequiredParameterException".equals(e.getName())) {
+                throw new CliException("Failed to discover artifact type from content. Please specify the type using --type.", e, CliException.APPLICATION_ERROR_RETURN_CODE);
+            }
+            throw e;
+        }
+
         //noinspection ConstantConditions
         final var artifact = convert(result.getArtifact());
         switch (outputType.getOutputType()) {
