@@ -7,6 +7,7 @@ import io.apicurio.registry.auth.AuthorizedLevel;
 import io.apicurio.registry.auth.AuthorizedStyle;
 import io.apicurio.registry.content.ContentHandle;
 import io.apicurio.registry.content.TypedContent;
+import io.apicurio.registry.contracts.ContractLabels;
 import io.apicurio.registry.logging.Logged;
 import io.apicurio.registry.metrics.OTelMetricsProvider;
 import io.apicurio.registry.metrics.health.liveness.ResponseErrorLivenessCheck;
@@ -465,16 +466,20 @@ public class SearchResourceImpl implements SearchResource {
         Set<SearchFilter> filters = new HashSet<>();
 
         // All contracts have a contract.*.status label
-        filters.add(SearchFilter.ofLabel("contract."));
+        filters.add(SearchFilter.ofLabel(ContractLabels.PREFIX + "*." + ContractLabels.SUFFIX_STATUS));
 
         if (!StringUtil.isEmpty(status)) {
-            filters.add(SearchFilter.ofLabel("contract.", status));
+            filters.add(SearchFilter.ofLabel(
+                    ContractLabels.PREFIX + "*." + ContractLabels.SUFFIX_STATUS, status));
         }
         if (!StringUtil.isEmpty(ownerTeam)) {
-            filters.add(SearchFilter.ofLabel("contract.", ownerTeam));
+            filters.add(SearchFilter.ofLabel(
+                    ContractLabels.PREFIX + "*." + ContractLabels.SUFFIX_OWNER_TEAM, ownerTeam));
         }
         if (!StringUtil.isEmpty(compatibilityGroup)) {
-            filters.add(SearchFilter.ofLabel("contract.", compatibilityGroup));
+            filters.add(SearchFilter.ofLabel(
+                    ContractLabels.PREFIX + "*." + ContractLabels.SUFFIX_COMPATIBILITY_GROUP,
+                    compatibilityGroup));
         }
 
         ArtifactSearchResultsDto results = storage.searchArtifacts(filters, oBy, oDir,

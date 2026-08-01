@@ -48,6 +48,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
@@ -1023,10 +1024,22 @@ public class DataContractsResourceTest extends AbstractResourceTestBase {
 
     @Test
     public void testSearchContracts_ReturnsResults() throws Exception {
+        String artifactId = "testSearch_Returns-" + UUID.randomUUID();
+        createArtifact(GROUP, artifactId, ArtifactType.AVRO,
+                "{\"type\":\"record\",\"name\":\"R\",\"fields\":[{\"name\":\"x\",\"type\":\"int\"}]}",
+                ContentTypes.APPLICATION_JSON);
+
+        given().when().contentType(CT_JSON)
+                .pathParam("groupId", GROUP).pathParam("artifactId", artifactId)
+                .body(EditableContractMetadata.builder().status(EditableContractMetadata.Status.DRAFT).build())
+                .put("/registry/v3/groups/{groupId}/artifacts/{artifactId}/contract/metadata")
+                .then().statusCode(200);
+
         given().when()
                 .get("/registry/v3/search/contracts")
                 .then().statusCode(200)
-                .body("count", notNullValue());
+                .body("count", greaterThanOrEqualTo(1))
+                .body("artifacts.size()", greaterThanOrEqualTo(1));
     }
 
     @Test
@@ -1045,7 +1058,9 @@ public class DataContractsResourceTest extends AbstractResourceTestBase {
         given().when()
                 .queryParam("status", "DRAFT")
                 .get("/registry/v3/search/contracts")
-                .then().statusCode(200);
+                .then().statusCode(200)
+                .body("count", greaterThanOrEqualTo(1))
+                .body("artifacts.artifactId", hasItem(artifactId));
     }
 
     @Test
